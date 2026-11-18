@@ -1,0 +1,10 @@
+{
+  "sito": "https://malizia-g.github.io/verifica_angular_prova/",
+  "apps_script": "https://script.google.com/macros/s/AKfycbwWgssZjjU1vVmbPYt3TTosJUbY-jMB5C68KatzFO60Dx3v1JDMizs8KP17axUMtgr_/exec",
+  "registro_foglio": "1w_TbfM4U-Cue9mofQ2mnuxskroizHVXKfAdIWjijgQ8",
+  "drive_cartella_verifiche": "1JiZQNlyVHFKaaTJL4_anVb-mm3GLFDsP",
+  "drive_cartelle_materie": { "TPSI": "1iqMuXb1OP87NKu63W4kbe36GY2iT9ryo" },
+  "verifiche": {
+    "TPSI/00.1.3-componenti-git": { "foglio": "1Bdi9XPXkJdXEBdb6iwpsSJnMNULhU2lu5XuNZ_u0gGo", "classe": "4F" }
+  }
+}

@@ -3,12 +3,14 @@
 Versione online: prepara il contenuto del Google Sheet di una verifica.
 
 Uso:
+    python strumenti/prepara_foglio.py verifiche/TPSI/00.1.3-componenti-git --xlsx foglio.xlsx
+        → file Excel con tutte le schede: caricalo su Drive con conversione in Google Sheet
     python strumenti/prepara_foglio.py verifiche/TPSI/00.1.3-componenti-git > foglio.json
 
 Scrive su stdout un JSON {nome_scheda: [[riga], ...]} con le schede
 impostazioni, codici, domande, sessioni, risposte, eventi — pronto da scrivere nel foglio
 (ogni scheda dalla cella A1). La chiave di correzione NON entra nel foglio.
-Le domande sono spezzate in pezzi da 40.000 caratteri (limite di una cella: 50.000).
+Le domande sono spezzate in pezzi da 30.000 caratteri (limite di una cella Excel: 32.767).
 """
 import csv, json, os, sys
 
@@ -23,7 +25,7 @@ def main():
     ver = sys.argv[1]
     D = json.load(open(os.path.join(ver, "domande.json"), encoding="utf-8"))
     testo = json.dumps(D, ensure_ascii=False, separators=(",", ":"))
-    pezzi = [testo[i:i + 40000] for i in range(0, len(testo), 40000)]
+    pezzi = [testo[i:i + 30000] for i in range(0, len(testo), 30000)]
     with open(os.path.join(ver, "codici.csv"), encoding="utf-8-sig", newline="") as f:
         cod = [[r["codice"], r["nome"], r.get("classe", ""), str(r.get("scenario", "")), r.get("postazione", "")] for r in csv.DictReader(f)]
     out = {
@@ -32,7 +34,19 @@ def main():
         "domande": [["json"]] + [[p] for p in pezzi],
     }
     out.update({k: [v] for k, v in INTESTAZIONI.items()})
-    json.dump(out, sys.stdout, ensure_ascii=False)
+    if "--xlsx" in sys.argv:
+        from openpyxl import Workbook
+        wb = Workbook(); wb.remove(wb.active)
+        for nome, righe in out.items():
+            ws = wb.create_sheet(nome)
+            for r in righe: ws.append(r)
+            for col in ws.iter_cols(min_col=1, max_col=ws.max_column):
+                for c in col:
+                    if isinstance(c.value, str): c.number_format = "@"   # i codici restano testo
+        dest = sys.argv[sys.argv.index("--xlsx") + 1]
+        wb.save(dest); print("Creato", dest, "con le schede", ", ".join(out))
+    else:
+        json.dump(out, sys.stdout, ensure_ascii=False)
 
 if __name__ == "__main__":
     main()
