@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pannello docente</title>
+<style>
+:root{ --bg:#f4f5f9; --card:#fff; --ink:#18203a; --muted:#5b6478; --line:#d9deea; --accent:#3b2fc9; --ok:#2b8a3e; --warn:#d9480f; --bad:#c92a2a; }
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 "Segoe UI", system-ui, sans-serif}
+.wrap{max-width:1200px; margin:0 auto; padding:16px}
+h1{margin:0 0 4px; font-size:24px}
+.riass{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0}
+.riass div{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px 14px}
+.riass b{font-size:22px; display:block; font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:12px}
+table{border-collapse:collapse; width:100%; font-size:14px}
+th,td{padding:7px 9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; white-space:nowrap}
+th{font-size:12px; color:var(--muted); background:#f8f9fc; position:sticky; top:0}
+td.av{white-space:normal; color:var(--warn); font-weight:600}
+.pill{font-size:12px; font-weight:700; padding:2px 8px; border-radius:999px; background:#eef0f6}
+.pill.ok{background:#dff3e4; color:var(--ok)} .pill.run{background:#e8e6ff; color:var(--accent)}
+.ev{font-weight:700; font-variant-numeric:tabular-nums} .ev.hi{color:var(--bad)}
+button,select,input{font:600 13px inherit; padding:5px 9px; border-radius:7px; border:1px solid var(--line); background:#fff; color:var(--ink)}
+button{cursor:pointer} button.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+.barra{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0}
+.note{color:var(--muted); font-size:13px}
+.err{color:var(--bad); font-weight:600}
+code.link{background:#fff; border:1px solid var(--line); border-radius:6px; padding:3px 6px; user-select:all; overflow-wrap:anywhere}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="titolo">Pannello docente</h1>
+  <div class="note" id="agg"></div>
+
+  <form id="fPw" class="barra" hidden>
+    <label for="pw">Password docente</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button type="submit" class="primary">Entra</button><span class="err" id="pwErr"></span>
+  </form>
+
+  <div id="scelta" class="barra" hidden>
+    <label for="selV">Verifica</label>
+    <select id="selV" style="max-width:100%"></select>
+    <button type="button" id="bAggiorna">Aggiorna elenco</button>
+  </div>
+
+  <div id="online" class="barra" hidden>
+    <span id="stAperta" class="pill"></span>
+    <button type="button" id="bApri" class="primary"></button>
+    <button type="button" id="bEsporta">Scarica raccolta.json</button>
+  </div>
+  <p class="note" id="linkBox" hidden>Link per gli studenti: <code class="link" id="link"></code>
+    <br>Basta anche l'indirizzo senza <code>?v=…</code>: la pagina trova da sola la verifica aperta in cui esiste il codice.</p>
+
+  <div class="riass" id="riass"></div>
+  <div class="tw"><table>
+    <thead><tr><th>Codice</th><th>Studente</th><th>Classe</th><th>Scen.</th><th>Stato</th><th>Postazione / browser</th><th>Eventi</th><th>Ultimo salvataggio</th><th>Tempo</th><th>Segnalazioni</th><th></th></tr></thead>
+    <tbody id="righe"></tbody>
+  </table></div>
+  <p class="note">«Eventi» conta uscite dalla finestra o dallo schermo intero, tentativi di copia/incolla e ricariche. «Sblocca» lascia rientrare uno studente con lo stesso codice da un altro computer. «Nessun segnale dai controlli» vuol dire che la pagina salva ma non manda più il segnale periodico: i controlli potrebbero essere stati disattivati.</p>
+</div>
+<script src="config.js"></script>
+<script>
+(function(){
+var API=window.VERIFICA_API||"", PW="", V="";
+function $(id){ return document.getElementById(id); }
+function mk(t,x){ var e=document.createElement(t); if(x!==undefined) e.textContent=x; return e; }
+function hhmm(t){ return t ? new Date(t*1000).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit",second:"2-digit"}) : "—"; }
+try{ PW=sessionStorage.getItem("ver-pw")||""; }catch(e){}
+try{ V=new URLSearchParams(location.search).get("v")||localStorage.getItem("ver-v")||""; }catch(e){}
+
+/* online: tutte le richieste vanno all'Apps Script; in laboratorio: al server Flask */
+function chiama(azione,b){
+  b=b||{};
+  if(!API){
+    var get=azione==="stato";
+    return fetch(get?"/api/docente/stato":"/api/docente/"+azione,{method:get?"GET":"POST",headers:{"Content-Type":"application/json"},body:get?undefined:JSON.stringify(b)})
+      .then(function(r){ if(!r.ok) throw new Error("Errore "+r.status); return r.json(); });
+  }
+  b.azione=azione; b.password=PW; if(V && !b.v) b.v=V;
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(b)})
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if(j.errore){ var e=new Error(j.errore); e.pw=/password/i.test(j.errore); throw e; } return j; });
+}
+function errore(e){
+  if(e&&e.pw){ PW=""; try{sessionStorage.removeItem("ver-pw");}catch(x){} $("pwErr").textContent=e.message; $("fPw").hidden=false; return; }
+  $("agg").textContent = (e&&e.message&&!/fetch/i.test(e.message)) ? "Errore: "+e.message.slice(0,200) : "Server non raggiungibile.";
+}
+
+function elenco(){
+  return chiama("elenco").then(function(j){
+    $("fPw").hidden=true; $("scelta").hidden=false;
+    var s=$("selV"); s.innerHTML="";
+    var o0=mk("option","— scegli la verifica —"); o0.value=""; s.appendChild(o0);
+    j.verifiche.forEach(function(x){ var o=mk("option",(x.aperta?"🟢 ":"")+[x.materia,x.verifica,x.classe].filter(Boolean).join(" · ")); o.value=x.v; s.appendChild(o); });
+    if(V && j.verifiche.some(function(x){return x.v===V;})) s.value=V; else if(j.verifiche.length===1){ V=j.verifiche[0].v; s.value=V; }
+    else V="";
+    scegli();
+  });
+}
+function scegli(){
+  try{ localStorage.setItem("ver-v",V); }catch(e){}
+  try{ var u=new URL(location.href); if(V) u.searchParams.set("v",V); else u.searchParams.delete("v"); history.replaceState(null,"",u); }catch(e){}
+  $("online").hidden=!V; $("linkBox").hidden=!V;
+  if(V){ var base=location.href.replace(/docente\.html.*$/,""); $("link").textContent=base+"?v="+V; }
+  $("righe").innerHTML=""; $("riass").innerHTML="";
+  carica();
+}
+
+function carica(){
+  if(API && !PW){ $("fPw").hidden=false; return; }
+  if(API && !V){ $("agg").textContent="Scegli una verifica."; return; }
+  chiama("stato").then(function(j){
+    $("titolo").textContent=j.titolo||"Pannello docente";
+    $("agg").textContent="Aggiornato alle "+hhmm(j.ora)+" · aggiornamento ogni "+(API?6:3)+" secondi";
+    if(API){
+      var pa=$("stAperta"); pa.textContent=j.aperta?"APERTA: gli studenti possono entrare":"CHIUSA: nessuno può entrare"; pa.className="pill "+(j.aperta?"ok":"");
+      var ba=$("bApri"); ba.textContent=j.aperta?"Chiudi gli accessi":"Apri la verifica"; ba.onclick=function(){ ba.disabled=true; chiama("apri",{aperta:!j.aperta}).then(function(){ ba.disabled=false; return elenco(); }).catch(errore); };
+    }
+    var n={tot:j.righe.length,cons:0,corso:0,fuori:0,av:0}, tb=$("righe"); tb.innerHTML="";
+    j.righe.sort(function(a,b){ var o={"in corso":0,"non entrato":1,"consegnata":2}; return o[a.stato]-o[b.stato] || String(a.nome).localeCompare(b.nome); });
+    j.righe.forEach(function(r){
+      if(r.stato==="consegnata") n.cons++; else if(r.stato==="in corso") n.corso++; else n.fuori++; if(r.avvisi.length) n.av++;
+      var tr=mk("tr");
+      [r.codice,r.nome,r.classe,r.scenario].forEach(function(x){ tr.appendChild(mk("td",x)); });
+      var st=mk("td"), p=mk("span",r.stato); p.className="pill "+(r.stato==="consegnata"?"ok":r.stato==="in corso"?"run":""); st.appendChild(p); tr.appendChild(st);
+      tr.appendChild(mk("td",[r.postazione,r.ip].filter(Boolean).join(" · ")));
+      var ev=mk("td",String(r.eventi)); ev.className="ev"+(r.eventi>=3?" hi":""); tr.appendChild(ev);
+      tr.appendChild(mk("td",hhmm(r.ultimo)));
+      tr.appendChild(mk("td", r.scadenza && r.stato==="in corso" ? Math.max(0,Math.round((r.scadenza-j.ora)/60))+" min" : ""));
+      var av=mk("td",r.avvisi.join(" · ")); av.className="av"; tr.appendChild(av);
+      var az=mk("td");
+      if(r.stato==="in corso"){
+        var b1=mk("button","+5 min"); b1.onclick=function(){ chiama("tempo",{codice:r.codice,minuti:5}).then(carica).catch(errore); }; az.appendChild(b1);
+        var b2=mk("button","Sblocca"); b2.style.marginLeft="4px"; b2.onclick=function(){ chiama("sblocca",{codice:r.codice}).then(carica).catch(errore); }; az.appendChild(b2);
+      }
+      tr.appendChild(az); tb.appendChild(tr);
+    });
+    var ri=$("riass"); ri.innerHTML="";
+    [["Consegnate",n.cons+" / "+n.tot],["In corso",n.corso],["Non entrati",n.fuori],["Con segnalazioni",n.av]].forEach(function(x){ var d=mk("div"); d.appendChild(mk("b",String(x[1]))); d.appendChild(mk("span",x[0])); ri.appendChild(d); });
+  }).catch(errore);
+}
+
+$("fPw").addEventListener("submit",function(ev){ ev.preventDefault(); PW=$("pw").value; try{sessionStorage.setItem("ver-pw",PW);}catch(x){} $("pwErr").textContent=""; elenco().catch(errore); });
+$("selV").addEventListener("change",function(){ V=this.value; scegli(); });
+$("bAggiorna").addEventListener("click",function(){ elenco().catch(errore); });
+$("bEsporta").addEventListener("click",function(){
+  var b=this; b.disabled=true;
+  chiama("esporta").then(function(j){
+    var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,1)],{type:"application/json"}));
+    a.download="raccolta.json"; document.body.appendChild(a); a.click(); a.remove();
+  }).catch(errore).then(function(){ b.disabled=false; });
+});
+
+if(API){ if(PW) elenco().catch(errore); else $("fPw").hidden=false; }
+else carica();
+setInterval(function(){ if(!API || (PW && V)) carica(); }, API?6000:3000);
+})();
+</script>
+</body>
+</html>

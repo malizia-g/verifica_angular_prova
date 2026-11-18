@@ -1,7 +1,6 @@
-# Verifica online
+# Verifiche online
 
-- **Studenti:** aprono la pagina principale del sito e scrivono il codice del bigliettino.
-- **Docente:** `docente.html` (password nel foglio Google, scheda *impostazioni*).
+- **Studenti:** pagina principale del sito, poi il codice del bigliettino.
+- **Docente:** `docente.html` (password nella scheda *impostazioni* del foglio "Registro verifiche").
 
-Questo repository è pubblico e contiene **solo** la pagina: domande, codici e risposte stanno nel Google Sheet
-collegato all'Apps Script indicato in `config.js`. La chiave di correzione non va mai messa qui.
+Istruzioni complete in [LEGGIMI.md](LEGGIMI.md).

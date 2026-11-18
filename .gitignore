@@ -1,0 +1,5 @@
+# dati degli studenti: restano sul PC o nel foglio Google, mai nel repository
+raccolta/
+risultati/
+raccolta.json
+__pycache__/
