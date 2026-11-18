@@ -85,7 +85,7 @@ function carica(){
     });
     var ri=document.getElementById("riass"); ri.innerHTML="";
     [["Consegnate",n.cons+" / "+n.tot],["In corso",n.corso],["Non entrati",n.fuori],["Con segnalazioni",n.av]].forEach(function(x){ var d=mk("div"); d.appendChild(mk("b",String(x[1]))); d.appendChild(mk("span",x[0])); ri.appendChild(d); });
-  }).catch(function(e){ if(e&&e.pw){ PW=""; try{sessionStorage.removeItem("ver-pw");}catch(x){} document.getElementById("pwErr").textContent=e.message; document.getElementById("fPw").hidden=false; return; } document.getElementById("agg").textContent="Server non raggiungibile."; });
+  }).catch(function(e){ if(e&&e.pw){ PW=""; try{sessionStorage.removeItem("ver-pw");}catch(x){} document.getElementById("pwErr").textContent=e.message; document.getElementById("fPw").hidden=false; return; } document.getElementById("agg").textContent=(API&&e&&e.message&&!/fetch/i.test(e.message))?"Errore dallo script: "+e.message.slice(0,200):"Server non raggiungibile."; });
 }
 document.getElementById("fPw").addEventListener("submit",function(ev){ ev.preventDefault(); PW=document.getElementById("pw").value; try{sessionStorage.setItem("ver-pw",PW);}catch(x){} document.getElementById("pwErr").textContent=""; carica(); });
 document.getElementById("bEsporta").addEventListener("click",function(){ var b=this; b.disabled=true; chiama("esporta").then(function(j){ var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,1)],{type:"application/json"})); a.download="raccolta.json"; document.body.appendChild(a); a.click(); a.remove(); }).catch(function(e){ alert(e.message); }).then(function(){ b.disabled=false; }); });
