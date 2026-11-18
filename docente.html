@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pannello docente</title>
+<style>
+:root{ --bg:#f4f5f9; --card:#fff; --ink:#18203a; --muted:#5b6478; --line:#d9deea; --accent:#3b2fc9; --ok:#2b8a3e; --warn:#d9480f; --bad:#c92a2a; }
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 "Segoe UI", system-ui, sans-serif}
+.wrap{max-width:1200px; margin:0 auto; padding:16px}
+h1{margin:0 0 4px; font-size:24px}
+.riass{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0}
+.riass div{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px 14px}
+.riass b{font-size:22px; display:block; font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:12px}
+table{border-collapse:collapse; width:100%; font-size:14px}
+th,td{padding:7px 9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; white-space:nowrap}
+th{font-size:12px; color:var(--muted); background:#f8f9fc; position:sticky; top:0}
+td.av{white-space:normal; color:var(--warn); font-weight:600}
+.pill{font-size:12px; font-weight:700; padding:2px 8px; border-radius:999px; background:#eef0f6}
+.pill.ok{background:#dff3e4; color:var(--ok)} .pill.run{background:#e8e6ff; color:var(--accent)}
+.ev{font-weight:700; font-variant-numeric:tabular-nums} .ev.hi{color:var(--bad)}
+button{font:600 12px inherit; padding:4px 8px; border-radius:7px; border:1px solid var(--line); background:#fff; cursor:pointer}
+.note{color:var(--muted); font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="titolo">Pannello docente</h1>
+  <div class="note" id="agg">Aggiornamento ogni 3 secondi.</div>
+  <form id="fPw" hidden style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <label for="pw" style="font-weight:600">Password docente</label>
+    <input id="pw" type="password" autocomplete="current-password" style="font:15px inherit;padding:6px 8px;border:1px solid var(--line);border-radius:7px">
+    <button type="submit">Entra</button><span class="note" id="pwErr" style="color:var(--bad)"></span>
+  </form>
+  <div id="online" hidden style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <span id="stAperta" class="pill"></span>
+    <button type="button" id="bApri"></button>
+    <button type="button" id="bEsporta">Scarica raccolta.json (per correggi.py)</button>
+  </div>
+  <div class="riass" id="riass"></div>
+  <div class="tw"><table>
+    <thead><tr><th>Codice</th><th>Studente</th><th>Classe</th><th>Scen.</th><th>Stato</th><th>Postazione / IP / browser</th><th>Eventi</th><th>Ultimo salvataggio</th><th>Tempo</th><th>Segnalazioni</th><th></th></tr></thead>
+    <tbody id="righe"></tbody>
+  </table></div>
+  <p class="note">«Eventi» conta le uscite dalla finestra o dallo schermo intero, i tentativi di copia/incolla e le ricariche: il dettaglio è in <code>raccolta/eventi.jsonl</code> e nel report di <code>correggi.py</code>. «Sblocca» permette a uno studente di rientrare con lo stesso codice da un altro PC.</p>
+</div>
+<script src="config.js"></script>
+<script>
+(function(){
+var API=window.VERIFICA_API||"", PW="";
+try{ PW=sessionStorage.getItem("ver-pw")||""; }catch(e){}
+function chiama(azione,b){ b=b||{}; if(!API){ return fetch(azione==="stato"?"/api/docente/stato":"/api/docente/"+azione,{method:azione==="stato"?"GET":"POST",headers:{"Content-Type":"application/json"},body:azione==="stato"?undefined:JSON.stringify(b)}).then(function(r){return r.json();}); }
+  b.azione=azione; b.password=PW; return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(b)}).then(function(r){return r.json();}).then(function(j){ if(j.errore){ var e=new Error(j.errore); e.pw=/password/i.test(j.errore); throw e; } return j; }); }
+function mk(t,x){ var e=document.createElement(t); if(x!==undefined) e.textContent=x; return e; }
+function hhmm(t){ return t ? new Date(t*1000).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit",second:"2-digit"}) : "—"; }
+function post(p,b){ return chiama(p.split("/").pop(),b).then(carica); }
+function carica(){
+  if(API && !PW){ document.getElementById("fPw").hidden=false; return; }
+  chiama("stato").then(function(j){
+    if(API){ document.getElementById("fPw").hidden=true; document.getElementById("online").hidden=false;
+      var pa=document.getElementById("stAperta"); pa.textContent=j.aperta?"Verifica APERTA: gli studenti possono entrare":"Verifica CHIUSA: nessuno può entrare"; pa.className="pill "+(j.aperta?"ok":"");
+      var ba=document.getElementById("bApri"); ba.textContent=j.aperta?"Chiudi gli accessi":"Apri la verifica"; ba.onclick=function(){ chiama("apri",{aperta:!j.aperta}).then(carica); }; }
+    document.getElementById("titolo").textContent=j.titolo||"Pannello docente";
+    document.getElementById("agg").textContent="Aggiornato alle "+hhmm(j.ora)+" · aggiornamento ogni "+(API?6:3)+" secondi";
+    var n={tot:j.righe.length,cons:0,corso:0,fuori:0,av:0};
+    var tb=document.getElementById("righe"); tb.innerHTML="";
+    j.righe.sort(function(a,b){ var o={"in corso":0,"non entrato":1,"consegnata":2}; return o[a.stato]-o[b.stato] || a.nome.localeCompare(b.nome); });
+    j.righe.forEach(function(r){
+      if(r.stato==="consegnata") n.cons++; else if(r.stato==="in corso") n.corso++; else n.fuori++; if(r.avvisi.length) n.av++;
+      var tr=mk("tr");
+      tr.appendChild(mk("td",r.codice)); tr.appendChild(mk("td",r.nome)); tr.appendChild(mk("td",r.classe)); tr.appendChild(mk("td",r.scenario));
+      var st=mk("td"); var p=mk("span",r.stato); p.className="pill "+(r.stato==="consegnata"?"ok":r.stato==="in corso"?"run":""); st.appendChild(p); tr.appendChild(st);
+      tr.appendChild(mk("td",(r.postazione?r.postazione+" · ":"")+(r.ip||"")));
+      var ev=mk("td",String(r.eventi)); ev.className="ev"+(r.eventi>=3?" hi":""); tr.appendChild(ev);
+      tr.appendChild(mk("td",hhmm(r.ultimo)));
+      var rest = r.scadenza && r.stato==="in corso" ? Math.max(0,Math.round((r.scadenza-j.ora)/60))+" min" : "";
+      tr.appendChild(mk("td",rest));
+      var av=mk("td",r.avvisi.join(" · ")); av.className="av"; tr.appendChild(av);
+      var az=mk("td");
+      if(r.stato==="in corso"){ var b1=mk("button","+5 min"); b1.onclick=function(){ post("/api/docente/tempo",{codice:r.codice,minuti:5}); }; az.appendChild(b1);
+        var b2=mk("button","Sblocca"); b2.style.marginLeft="4px"; b2.onclick=function(){ post("/api/docente/sblocca",{codice:r.codice}); }; az.appendChild(b2); }
+      tr.appendChild(az); tb.appendChild(tr);
+    });
+    var ri=document.getElementById("riass"); ri.innerHTML="";
+    [["Consegnate",n.cons+" / "+n.tot],["In corso",n.corso],["Non entrati",n.fuori],["Con segnalazioni",n.av]].forEach(function(x){ var d=mk("div"); d.appendChild(mk("b",String(x[1]))); d.appendChild(mk("span",x[0])); ri.appendChild(d); });
+  }).catch(function(e){ if(e&&e.pw){ PW=""; try{sessionStorage.removeItem("ver-pw");}catch(x){} document.getElementById("pwErr").textContent=e.message; document.getElementById("fPw").hidden=false; return; } document.getElementById("agg").textContent="Server non raggiungibile."; });
+}
+document.getElementById("fPw").addEventListener("submit",function(ev){ ev.preventDefault(); PW=document.getElementById("pw").value; try{sessionStorage.setItem("ver-pw",PW);}catch(x){} document.getElementById("pwErr").textContent=""; carica(); });
+document.getElementById("bEsporta").addEventListener("click",function(){ var b=this; b.disabled=true; chiama("esporta").then(function(j){ var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,1)],{type:"application/json"})); a.download="raccolta.json"; document.body.appendChild(a); a.click(); a.remove(); }).catch(function(e){ alert(e.message); }).then(function(){ b.disabled=false; }); });
+carica(); setInterval(carica,API?6000:3000);
+})();
+</script>
+</body>
+</html>
