@@ -43,7 +43,39 @@ verifiche/<MATERIA>/<verifica>/
    - *Chi ha accesso*: **Chiunque**.
 
    Metti l'URL `/exec` in `docs/config.js`.
-4. Dopo ogni modifica di `Codice.gs` vai su Gestisci distribuzioni → matita → Versione: **Nuova versione**. L'URL non cambia.
+4. Dopo ogni modifica di `Codice.gs` la nuova versione la pubblica GitHub da solo (vedi *Aggiornamento automatico dello script*). A mano: Gestisci distribuzioni → matita → Versione: **Nuova versione**. L'URL non cambia.
+
+## Aggiornamento automatico dello script
+
+Il workflow `.github/workflows/apps-script.yml` parte a ogni push che modifica `apps-script/`
+(oppure da Actions → *Pubblica Apps Script* → **Run workflow**). Con `clasp`:
+
+1. scarica dal progetto attuale solo `appsscript.json` (le impostazioni dell'app web restano quelle di Google);
+2. carica `apps-script/*.gs` (`clasp push --force`);
+3. pubblica una nuova versione sulla **stessa** distribuzione (`clasp deploy --deploymentId …`): l'URL `/exec` non cambia.
+
+Configurazione, una volta sola (Settings → Secrets and variables → Actions):
+
+| Nome | Tipo | Valore |
+|---|---|---|
+| `CLASPRC_JSON` | secret | contenuto di `~/.clasprc.json` dell'account **proprietario dello script** (account della scuola) |
+| `SCRIPT_ID` | variable | Apps Script → Impostazioni progetto → ID script (progetto aperto da *Registro verifiche → Estensioni → Apps Script*) |
+| `DEPLOYMENT_ID` | variable | la parte dell'URL dell'app web tra `/s/` e `/exec` |
+
+Prerequisito: API Google Apps Script attiva in https://script.google.com/home/usersettings.
+
+Per ottenere `~/.clasprc.json` in un Codespace:
+
+- `clasp login --no-localhost` **non funziona più** (Google ha disattivato quel metodo).
+- `clasp login` nel Codespace si interrompe con *Error retrieving access token: null*, perché il Codespace "tocca" da solo la porta locale.
+- Funziona `clasp login` dal proprio PC, oppure uno script che fa l'accesso OAuth a mano (redirect su `http://localhost:8888`, si incolla l'indirizzo finale) e scrive `~/.clasprc.json`.
+
+Controlla l'account con `clasp login --status`.
+
+Errori tipici nel log del workflow:
+
+- *Could not find script* → `SCRIPT_ID` sbagliato oppure credenziali di un altro account;
+- *User has not enabled the Apps Script API* → prerequisito mancante.
 
 ## Online: una nuova verifica
 
@@ -58,8 +90,8 @@ Lo script non va toccato.
 
 ## Il giorno della verifica
 
-1. Apri `docente.html`, metti la password, scegli la verifica e premi **Apri la verifica**.
-   Puoi anche aprire direttamente `docente.html?v=<ID-foglio>`.
+1. Apri `docs/docente.html` (https://malizia-g.github.io/verifica_angular_prova/docs/docente.html), metti la password, scegli la verifica e premi **Apri la verifica**.
+   Puoi anche aprire direttamente `docs/docente.html?v=<ID-foglio>`: il sito è pubblicato dalla radice del repository, quindi nel percorso serve `docs/`.
 2. Gli studenti aprono la pagina principale e scrivono il codice. La pagina trova da sola, tra le verifiche **aperte**, quella in cui esiste quel codice.
    Si può dare anche il link con `?v=<ID-foglio>`.
 3. Alla fine premi **Chiudi gli accessi**, poi **Scarica raccolta.json**.
