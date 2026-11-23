@@ -9,11 +9,15 @@
   "verifiche": {
     "TPSI/00.1.3-componenti-git": {
       "foglio": "1Bdi9XPXkJdXEBdb6iwpsSJnMNULhU2lu5XuNZ_u0gGo",
-      "classe": "4F"
+      "classe": "4F",
+      "titolo": "00.1.3 Componenti e Git",
+      "creata": "2026-11-18"
     },
     "TPSI/05.3.5-git-branch-merge-4E": {
       "foglio": "13H3Pa-LQpgpCGZBeXmBNlSFmK6i1N40xaRrrj8NKjaA",
-      "classe": "4E"
+      "classe": "4E",
+      "titolo": "05.3.5 Git branch, merge e detached HEAD",
+      "creata": "2026-11-23"
     }
   }
 }

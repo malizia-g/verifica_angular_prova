@@ -85,8 +85,22 @@ La crea la skill **crea-verifica** di Claude, partendo dall'esercitazione fatta 
 2. Prepara `studenti.csv` (`nome,classe`) e lancia `python strumenti/crea_codici.py verifiche/<MATERIA>/<id> verifiche/<MATERIA>/<id>/studenti.csv`.
 3. Crea un Google Sheet nuovo. Lancia `python strumenti/prepara_foglio.py verifiche/<MATERIA>/<id>` e scrivi ogni scheda dalla cella A1. Le schede sono: impostazioni, codici, domande, sessioni, risposte, eventi.
 4. Aggiungi una riga nel `registro` con l'ID del foglio. Lo script la vede entro 2 minuti.
+5. Aggiungi la verifica in `verifiche.config.json`, sotto `verifiche`:
+   `"<MATERIA>/<id>": {"foglio": "<ID-foglio>", "classe": "4E", "titolo": "05.3.5 Git branch…", "creata": "AAAA-MM-GG"}`.
+   Al push, il workflow *Aggiorna wiki* riscrive la pagina wiki **Registro verifiche**.
 
 Lo script non va toccato.
+
+## Registro nella wiki
+
+La pagina wiki *Registro verifiche* elenca tutte le verifiche divise per materia e anno (TPSI - 3, TPSI - 4, …).
+Per ognuna dà il foglio Google (risposte e correzione), il pannello docente e la pagina studenti con `?v=<ID-foglio>`.
+
+- La genera `strumenti/aggiorna_wiki.py` da `verifiche.config.json`. Non va modificata a mano.
+- Il workflow `.github/workflows/wiki.yml` la aggiorna a ogni push che cambia il config. A mano: Actions → *Aggiorna wiki* → **Run workflow**.
+- Prima volta: la wiki deve già esistere (scheda Wiki → *Create the first page* → salva).
+
+> La wiki di un repository pubblico è pubblica. I fogli Google restano protetti dai loro permessi e il pannello docente dalla password.
 
 ## Il giorno della verifica
 

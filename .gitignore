@@ -3,3 +3,6 @@ raccolta/
 risultati/
 raccolta.json
 __pycache__/
+
+# Impostazioni locali di Claude Code (non condividere)
+.claude/settings.local.json

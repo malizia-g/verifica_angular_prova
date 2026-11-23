@@ -1,0 +1,41 @@
+# Aggiorna la pagina wiki "Registro verifiche" a ogni modifica di verifiche.config.json.
+# Prerequisito (una volta sola): la wiki deve esistere, cioè avere almeno una pagina creata dal sito.
+name: Aggiorna wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - verifiche.config.json
+      - strumenti/aggiorna_wiki.py
+      - .github/workflows/wiki.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: wiki
+
+jobs:
+  wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scarica la wiki
+        run: |
+          git clone "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.wiki.git" /tmp/wiki \
+            || { echo "La wiki non esiste ancora: creane la prima pagina da GitHub (scheda Wiki)"; exit 1; }
+
+      - name: Genera il registro
+        run: python3 strumenti/aggiorna_wiki.py /tmp/wiki
+
+      - name: Pubblica
+        working-directory: /tmp/wiki
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo "Nessuna modifica"; exit 0; }
+          git commit -m "Registro verifiche (${GITHUB_SHA::7})"
+          git push
