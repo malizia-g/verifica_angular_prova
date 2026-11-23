@@ -8,7 +8,7 @@ Uso:
     python strumenti/aggiorna_wiki.py <cartella-della-wiki>
 
 Lo lancia da solo il workflow .github/workflows/wiki.yml a ogni modifica del config.
-Riscrive solo Registro-verifiche.md; crea Home.md solo se non esiste.
+Riscrive solo Registro-verifiche.md; crea Home.md e _Sidebar.md solo se non esistono.
 """
 import json, os, re, sys
 from collections import defaultdict
@@ -74,6 +74,9 @@ def main():
     home = os.path.join(wiki, "Home.md")
     if not os.path.exists(home):
         open(home, "w", encoding="utf-8").write("# Verifiche online\n\n- [[Registro verifiche|Registro-verifiche]]\n")
+    barra = os.path.join(wiki, "_Sidebar.md")
+    if not os.path.exists(barra):
+        open(barra, "w", encoding="utf-8").write("**[[Registro verifiche|Registro-verifiche]]**\n")
     print(f"Scritto {PAGINA}: {sum(len(x) for x in gruppi.values())} verifiche in {len(gruppi)} gruppi")
 
 
